@@ -1,62 +1,55 @@
-/* Trexinity Chat UI CSS */
-body {
-  margin: 0;
-  font-family: Arial, sans-serif;
-  background: #0f172a;
-  color: #f8fafc;
+/* Trexinity Chat Styles */
+:root{
+  --bg:#071027;
+  --panel:#061227;
+  --muted:#94a3b8;
+  --accent:#0b66ff;
+  --bubble-user:#0b66ff;
+  --bubble-bot:#0b2230;
+  --card-shadow: 0 8px 28px rgba(2,6,23,0.6);
 }
 
-#trexinity-root {
-  display: flex;
-  flex-direction: column;
-  height: 100vh;
-}
+html,body{height:100%;margin:0;font-family:Inter,system-ui,Segoe UI,Roboto,"Helvetica Neue";}
+#trexinity-root{max-width:980px;margin:18px auto;height:calc(100vh - 48px);display:flex;flex-direction:column;gap:12px;}
 
-#chat-window {
-  flex: 1;
-  overflow-y: auto;
-  padding: 16px;
-}
+.trex-shell{background:linear-gradient(180deg,var(--bg),#041226);border-radius:12px;overflow:hidden;box-shadow:var(--card-shadow);border:1px solid rgba(255,255,255,0.03);display:flex;flex-direction:column;height:100%;}
+.trex-header{display:flex;align-items:center;padding:12px 16px;border-bottom:1px solid rgba(255,255,255,0.02);gap:12px}
+.trex-logo{width:44px;height:44px;border-radius:8px;background:linear-gradient(135deg,var(--accent),#2563eb);display:flex;align-items:center;justify-content:center;font-weight:800;color:white}
+.trex-title{font-weight:700;color:#e6eef8}
+.trex-status{margin-left:auto;color:var(--muted);font-size:13px}
 
-.message {
-  margin: 10px 0;
-  padding: 10px 14px;
-  border-radius: 12px;
-  max-width: 80%;
-}
+.trex-messages{flex:1;overflow:auto;padding:16px;display:flex;flex-direction:column;gap:12px}
+.trex-row{display:flex}
+.trex-row.user{justify-content:flex-end}
+.trex-row.bot{justify-content:flex-start}
+.trex-bubble{max-width:78%;padding:12px 14px;border-radius:12px;white-space:pre-wrap;line-height:1.45;font-size:14px}
+.trex-bubble.user{background:var(--bubble-user);color:#fff;border-bottom-right-radius:6px}
+.trex-bubble.bot{background:linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));color:#dbeafe;border:1px solid rgba(255,255,255,0.02);border-bottom-left-radius:6px}
 
-.user {
-  background: #2563eb;
-  color: white;
-  align-self: flex-end;
-}
+.trex-srcs{margin-top:8px;font-size:12px;color:var(--muted)}
+.trex-img{max-width:220px;border-radius:8px;margin-top:8px;cursor:zoom-in}
 
-.bot {
-  background: #1e293b;
-  color: #f1f5f9;
-  align-self: flex-start;
-}
+.trex-input-row{display:flex;gap:10px;padding:12px;border-top:1px solid rgba(255,255,255,0.02);align-items:flex-end}
+.trex-text{flex:1;min-height:56px;max-height:180px;padding:12px;border-radius:10px;border:none;background:rgba(255,255,255,0.02);color:#e6eef8;resize:none;font-size:14px}
+.trex-controls{display:flex;flex-direction:column;gap:8px}
+.trex-btn{padding:10px 12px;border-radius:10px;border:none;cursor:pointer;font-weight:700}
+.trex-send{background:var(--bubble-user);color:#fff}
+.trex-clear{background:transparent;color:var(--muted);border:1px solid rgba(255,255,255,0.03)}
 
-#input-area {
-  display: flex;
-  padding: 10px;
-  background: #1e293b;
-}
+.trex-typing{font-size:13px;color:var(--muted)}
+.trex-dots span{display:inline-block;width:6px;height:6px;margin:0 2px;background:#cbd5e1;border-radius:50%;opacity:.5;animation:trexDot 1s infinite}
+.trex-dots span:nth-child(2){animation-delay:.12s} .trex-dots span:nth-child(3){animation-delay:.24s}
+@keyframes trexDot{0%{transform:translateY(0);opacity:.4}50%{transform:translateY(-6px);opacity:1}100%{transform:translateY(0);opacity:.4}}
 
-#input-box {
-  flex: 1;
-  padding: 12px;
-  border: none;
-  border-radius: 10px;
-  font-size: 14px;
-}
+.trex-modal{position:fixed;inset:0;display:none;align-items:center;justify-content:center;background:rgba(0,0,0,0.7);z-index:9999}
+.trex-modal.open{display:flex}
+.trex-modal img{max-width:92%;max-height:92%;border-radius:8px}
 
-#send-btn {
-  margin-left: 10px;
-  background: #2563eb;
-  color: white;
-  border: none;
-  padding: 12px 18px;
-  border-radius: 10px;
-  cursor: pointer;
+.trex-intro{color:var(--muted);font-size:13px;margin:12px 0}
+.trex-ads{margin:14px 0;text-align:center;color:var(--muted);font-size:13px}
+
+@media (max-width:720px){
+  #trexinity-root{margin:8px;height:calc(100vh - 32px)}
+  .trex-img{max-width:160px}
+  .trex-header{padding:10px}
 }
