@@ -1,131 +1,90 @@
-/* trexinity.js — Trexinity Chat frontend (vanilla JS) */
-(() => {
-  const WORKER_URL = "https://trexinity.shauryaagarwal-id.workers.dev/"; // your worker
-  const HISTORY_KEY = "trexinity_history_v1";
-  const FETCH_TIMEOUT = 30000;
+const MAIN_WORKER = "https://trexinity.shauryaagarwal-id.workers.dev/";
+const LOGIN_WORKER = "https://trexinity-login.shauryaagarwal-id.workers.dev/";
 
-  function mountApp(mountId="trexinity-root") {
-    const mount=document.getElementById(mountId);
-    if(!mount){ console.error("mount not found"); return; }
-    mount.innerHTML=`
-      <div class="trex-shell" role="application" aria-label="Trexinity chat">
-        <div class="trex-header">
-          <div class="trex-logo">T</div>
-          <div class="trex-title">Trexinity</div>
-          <div class="trex-status" id="trex_status">Ready</div>
-        </div>
-        <div class="trex-intro">Trexinity is an AI assistant for tech & product questions. Try: "Nothing Phone 1 specs".</div>
-        <div class="trex-ads" id="trex_ads_top">[Ad placeholder — paste AdSense here after approval]</div>
-        <div class="trex-messages" id="trex_messages" role="log" aria-live="polite"></div>
-        <div class="trex-input-row">
-          <textarea id="trex_text" class="trex-text" placeholder="Ask one or more questions — each on its own line. Shift+Enter for newline."></textarea>
-          <div class="trex-controls">
-            <button class="trex-btn trex-send" id="trex_send">Send</button>
-            <button class="trex-btn trex-clear" id="trex_clear">Clear</button>
-          </div>
-        </div>
-        <div class="trex-ads" id="trex_ads_bottom">[Footer Ad placeholder]</div>
+let isLoggedIn = false;
+let userProfile = null;
+
+document.addEventListener("DOMContentLoaded", () => {
+  mountUI();
+  setupLogin();
+});
+
+function mountUI() {
+  const root = document.getElementById("trexinity-root");
+  root.innerHTML = `
+    <div id="trex-sidebar"></div>
+    <div id="trex-chat-area">
+      <div id="trex-header">
+        <div id="trex-logo"></div>
+        <div id="trex-settings">⚙️</div>
       </div>
-      <div class="trex-modal" id="trex_modal"><img id="trex_modal_img" alt="Preview"></div>
-    `;
+      <div id="trex-tagline"></div>
+      <div id="trex-messages"></div>
+      <div id="trex-input-container">
+        <textarea id="trex-input" placeholder="Ask anything..."></textarea>
+        <button id="trex-send">Send</button>
+      </div>
+      <div id="trex-login-capsule">Login with Google</div>
+      <div id="trex-loading"><video autoplay loop muted src="https://drive.google.com/uc?export=view&id=1PpcxbsZxYROKOjJYNylZ0cU-wpcILcwo"></video></div>
+    </div>
+  `;
 
-    document.getElementById("trex_send").addEventListener("click", onSend);
-    document.getElementById("trex_clear").addEventListener("click", onClear);
-    document.getElementById("trex_text").addEventListener("keydown", e=>{
-      if(e.key==="Enter" && !e.shiftKey){ e.preventDefault(); onSend(); }
+  document.getElementById("trex-send").addEventListener("click", sendMessage);
+  document.getElementById("trex-input").addEventListener("keydown", e => {
+    if(e.key === "Enter" && !e.shiftKey) { e.preventDefault(); sendMessage(); }
+  });
+}
+
+function setupLogin() {
+  const capsule = document.getElementById("trex-login-capsule");
+  capsule.style.display = "flex";
+
+  capsule.addEventListener("click", async () => {
+    const res = await fetch(LOGIN_WORKER);
+    const data = await res.json();
+    if(data.loggedIn){
+      isLoggedIn = true;
+      userProfile = data.profile;
+      capsule.style.display = "none";
+      alert(`Welcome ${userProfile.name}`);
+    }
+  });
+}
+
+async function sendMessage() {
+  const inputEl = document.getElementById("trex-input");
+  const text = inputEl.value.trim();
+  if(!text) return;
+
+  appendMessage("user", text);
+  inputEl.value = "";
+  showLoading(true);
+
+  try {
+    const resp = await fetch(MAIN_WORKER, {
+      method: "POST",
+      headers: {"Content-Type":"application/json"},
+      body: JSON.stringify({question: text, includeYT:true})
     });
-
-    renderHistory();
+    const data = await resp.json();
+    showLoading(false);
+    appendMessage("bot", data.answer || "No answer");
+  } catch(err){
+    showLoading(false);
+    appendMessage("bot", "⚠️ Error fetching response");
   }
+}
 
-  function loadHistory(){ try{ return JSON.parse(localStorage.getItem(HISTORY_KEY)||"[]"); }catch(e){ return []; } }
-  function saveHistory(h){ try{ localStorage.setItem(HISTORY_KEY, JSON.stringify(h)); }catch(e){} }
+function appendMessage(role, text){
+  const container = document.getElementById("trex-messages");
+  const div = document.createElement("div");
+  div.className = `trex-message ${role}`;
+  div.textContent = text;
+  container.appendChild(div);
+  container.scrollTop = container.scrollHeight;
+}
 
-  function appendMessage(role, text, image=null, sources=[]) {
-    const container=document.getElementById("trex_messages");
-    const row=document.createElement("div"); row.className=`trex-row ${role==='user'?'user':'bot'}`;
-    const bubble=document.createElement("div"); bubble.className=`trex-bubble ${role==='user'?'user':'bot'}`;
-    bubble.textContent = text || "";
-    if(image){
-      bubble.appendChild(document.createElement("br"));
-      const img=document.createElement("img"); img.src=image; img.className="trex-img"; img.alt="Image";
-      img.addEventListener("click", ()=> openModal(image));
-      bubble.appendChild(img);
-    }
-    if(Array.isArray(sources) && sources.length){
-      const s=document.createElement("div"); s.className="trex-srcs"; s.textContent="Sources: "+sources.join(", ");
-      bubble.appendChild(s);
-    }
-    row.appendChild(bubble); container.appendChild(row); container.scrollTop = container.scrollHeight;
-  }
-
-  function openModal(src){ const modal=document.getElementById("trex_modal"); document.getElementById("trex_modal_img").src=src; modal.classList.add("open");
-    modal.addEventListener("click", ()=> modal.classList.remove("open"), { once:true });
-  }
-
-  function showTyping(){
-    const container=document.getElementById("trex_messages");
-    const node=document.createElement("div"); node.className="trex-row bot typing-node";
-    node.innerHTML = `<div class="trex-bubble bot"><span class="trex-typing"><span class="trex-dots"><span></span><span></span><span></span></span> Trexinity is thinking...</span></div>`;
-    container.appendChild(node); container.scrollTop = container.scrollHeight; return node;
-  }
-
-  async function onSend(){
-    const textEl=document.getElementById("trex_text");
-    const raw = textEl.value.trim();
-    if(!raw) return;
-    const questions = raw.split("\n").map(s=>s.trim()).filter(Boolean);
-    appendMessage("user", questions.join("\n"));
-    const hist = loadHistory(); hist.push({ role:"user", text:questions.join("\n"), t:Date.now() }); saveHistory(hist);
-    textEl.value = "";
-    const typingNode = showTyping();
-    document.getElementById("trex_status").textContent = "Thinking...";
-    document.getElementById("trex_send").disabled = true;
-
-    // fetch with timeout
-    const controller = new AbortController();
-    const timeout = setTimeout(()=> controller.abort(), FETCH_TIMEOUT);
-    try {
-      const r = await fetch(WORKER_URL, {
-        method: "POST",
-        headers: { "Content-Type":"application/json" },
-        body: JSON.stringify({ questions }),
-        signal: controller.signal
-      });
-      clearTimeout(timeout);
-      const rawResp = await r.text(); // read body once
-      let data;
-      try { data = JSON.parse(rawResp); } catch(e){
-        typingNode.remove();
-        appendMessage("bot", "⚠️ Invalid server response: " + rawResp);
-        document.getElementById("trex_status").textContent = "Server error";
-        return;
-      }
-      if(data.error){ typingNode.remove(); appendMessage("bot", "⚠️ Server error: "+(data.error||"unknown")); document.getElementById("trex_status").textContent="Server error"; return; }
-      typingNode.remove();
-      const answers = Array.isArray(data.answers) ? data.answers : [];
-      for(const a of answers){
-        appendMessage("bot", a.answer||"No answer", a.image||null, Array.isArray(a.sources)?a.sources:[]);
-        const hist2 = loadHistory(); hist2.push({ role:"bot", text: a.answer||"", image: a.image||null, sources: a.sources||[], t:Date.now() }); saveHistory(hist2);
-      }
-      document.getElementById("trex_status").textContent = "Done";
-    } catch (err){
-      typingNode.remove();
-      const msg = err.name==="AbortError" ? "Request timed out" : "Network error: "+(err.message||err);
-      appendMessage("bot", "⚠️ " + msg);
-      document.getElementById("trex_status").textContent = "Network error";
-      console.error("Trexinity error", err);
-    } finally {
-      document.getElementById("trex_send").disabled = false;
-      clearTimeout(timeout);
-    }
-  }
-
-  function onClear(){ if(!confirm("Clear chat history?")) return; localStorage.removeItem(HISTORY_KEY); document.getElementById("trex_messages").innerHTML=""; }
-
-  function renderHistory(){ const h = loadHistory()||[]; for(const m of h){ appendMessage(m.role, m.text, m.image||null, m.sources||[]); } document.getElementById("trex_messages").scrollTop = document.getElementById("trex_messages").scrollHeight; }
-
-  // init
-  if(document.readyState==="loading") document.addEventListener("DOMContentLoaded", ()=>mountApp());
-  else mountApp();
-})();
+function showLoading(flag){
+  const load = document.getElementById("trex-loading");
+  load.style.display = flag ? "block" : "none";
+}
