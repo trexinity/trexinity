@@ -1,164 +1,99 @@
-/* trexinity.css — Pro Liquid Glass Chat UI with Logo Animations */
-
-:root {
-  --bg-dark: #071027;
-  --bg-light: #ffffff;
-  --panel-dark: rgba(0,0,0,0.4);
-  --panel-light: rgba(255,255,255,0.6);
-  --accent: #ff6600;
-  --bubble-user: rgba(255,102,0,0.8);
-  --bubble-bot: rgba(255,255,255,0.08);
-  --card-shadow: 0 10px 30px rgba(0,0,0,0.6);
+/* trexinity.css — Trexinity pro UI (liquid glass, black-orange-white, apple-like) */
+/* Typewriter font used in Blogger via Google Fonts (VT323) */
+:root{
+  --bg-dark:#071027;
+  --bg-light:#ffffff;
+  --panel-dark: rgba(0,0,0,0.42);
+  --panel-light: rgba(255,255,255,0.85);
+  --accent:#ff6600;
+  --muted:#9aa6b2;
+  --bubble-user:#ff7a1a; /* orange */
+  --bubble-bot: rgba(255,255,255,0.03);
+  --glass-blur: 12px;
+  --card-shadow: 0 14px 40px rgba(2,6,23,0.6);
 }
 
-html, body {
-  margin: 0;
-  padding: 0;
-  font-family: 'Courier New', monospace;
-  height: 100%;
-  background-color: var(--bg-dark);
+/* base */
+*{box-sizing:border-box}
+html,body{height:100%;margin:0;font-family: 'VT323', monospace;background:var(--bg-dark);color:#e6eef8;-webkit-font-smoothing:antialiased}
+a{color:var(--accent)}
+/* root layout */
+#trexinity-root{max-width:1200px;margin:12px auto;height:calc(100vh - 24px);display:grid;grid-template-columns:300px 1fr;gap:16px;align-items:stretch}
+
+/* sidebar (history) */
+#trex-sidebar{background:linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));border-radius:12px;padding:12px;backdrop-filter:blur(var(--glass-blur));box-shadow:var(--card-shadow);border:1px solid rgba(255,255,255,0.02);overflow:auto}
+#trex-sidebar h3{margin:0 0 8px 0;font-size:16px}
+.chat-item{padding:10px;border-radius:10px;margin-bottom:8px;cursor:pointer;background:transparent;border:1px solid rgba(255,255,255,0.02)}
+.chat-item.active{background:linear-gradient(90deg, rgba(255,102,0,0.08), rgba(255,102,0,0.03));border-left:4px solid var(--accent)}
+
+/* main shell */
+#trex-shell{display:flex;flex-direction:column;height:100%;border-radius:12px;overflow:hidden;box-shadow:var(--card-shadow);border:1px solid rgba(255,255,255,0.03);background:linear-gradient(180deg,var(--bg-dark),#041226)}
+
+/* top header */
+#trex-top{display:flex;align-items:center;gap:12px;padding:14px;border-bottom:1px solid rgba(255,255,255,0.02)}
+#trex-logo-wrap{display:flex;align-items:center;gap:10px}
+#trex-logo-img{width:48px;height:48px;border-radius:10px;background-size:contain;background-position:center;background-repeat:no-repeat;box-shadow:0 6px 24px rgba(0,0,0,0.6)}
+#trex-logo-anim{width:56px;height:56px;border-radius:999px;display:none;overflow:hidden;align-items:center;justify-content:center}
+#trex-title{font-weight:700;font-size:16px}
+#trex-status{margin-left:auto;color:var(--muted);font-size:13px}
+
+/* tagline slider */
+#trex-tagline{font-size:14px;color:var(--accent);text-align:center;padding:6px;min-height:28px;}
+
+/* messages area */
+#trex-messages{flex:1;overflow:auto;padding:18px;display:flex;flex-direction:column;gap:12px;background:transparent}
+.row{display:flex}
+.row.user{justify-content:flex-end}
+.row.bot{justify-content:flex-start}
+.bubble{max-width:78%;padding:12px 14px;border-radius:14px;white-space:pre-wrap;line-height:1.45;font-size:15px;backdrop-filter:blur(calc(var(--glass-blur) - 2px))}
+.bubble.user{background:linear-gradient(180deg,var(--bubble-user),#ff6a00);color:#fff;border-bottom-right-radius:6px;box-shadow:0 8px 28px rgba(255,102,0,0.12)}
+.bubble.bot{background:linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));color:#dbeafe;border:1px solid rgba(255,255,255,0.02);border-bottom-left-radius:6px}
+
+/* images & video */
+.msg-media{max-width:320px;border-radius:10px;margin-top:8px;cursor:zoom-in;display:block}
+.msg-video{max-width:420px;border-radius:10px;margin-top:8px}
+
+/* sources */
+.msg-sources{margin-top:8px;font-size:12px;color:var(--muted)}
+
+/* typing indicator */
+.typing{font-size:13px;color:var(--muted)}
+.dots span{display:inline-block;width:8px;height:8px;margin:0 3px;background:#cbd5e1;border-radius:50%;opacity:.5;animation:dot 1s infinite}
+.dots span:nth-child(2){animation-delay:.12s}.dots span:nth-child(3){animation-delay:.24s}
+@keyframes dot{0%{transform:translateY(0);opacity:.4}50%{transform:translateY(-6px);opacity:1}100%{transform:translateY(0);opacity:.4}}
+
+/* input island (bottom) - capsule, expands vertically */
+#trex-input-island{display:flex;gap:12px;padding:12px;border-top:1px solid rgba(255,255,255,0.02);align-items:flex-end;background:linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));backdrop-filter:blur(var(--glass-blur))}
+#trex-input{flex:1;min-height:46px;max-height:360px;padding:12px;border-radius:16px;border:none;background:rgba(255,255,255,0.02);color:#e6eef8;resize:none;font-size:15px;outline:none;overflow:auto;line-height:1.4}
+#trex-controls{display:flex;flex-direction:column;gap:8px}
+.trex-btn{padding:10px 12px;border-radius:12px;border:none;cursor:pointer;font-weight:700}
+.trex-send{background:var(--bubble-user);color:#fff}
+.trex-clear{background:transparent;color:var(--muted);border:1px solid rgba(255,255,255,0.03)}
+
+/* modal image preview */
+.trex-modal{position:fixed;inset:0;display:none;align-items:center;justify-content:center;background:rgba(0,0,0,0.7);z-index:9999}
+.trex-modal.open{display:flex}
+.trex-modal img{max-width:92%;max-height:92%;border-radius:8px}
+
+/* login capsule */
+#login-capsule{position:fixed;left:50%;transform:translateX(-50%);bottom:86px;background:linear-gradient(180deg, rgba(0,0,0,0.45), rgba(0,0,0,0.25));padding:8px 14px;border-radius:28px;backdrop-filter:blur(var(--glass-blur));display:none;z-index:1000}
+#login-capsule .login-btn{background:transparent;border:1px solid rgba(255,255,255,0.06);padding:8px 12px;border-radius:20px;color:var(--muted);cursor:pointer}
+
+/* loading overlay (logo animation) */
+#trex-loading{position:fixed;left:50%;top:22%;transform:translateX(-50%);z-index:1200;display:none}
+#trex-loading video{width:96px;height:96px;border-radius:999px;border:4px solid var(--accent);box-shadow:0 8px 36px rgba(0,0,0,0.6)}
+
+/* top tabs UI */
+#top-tabs{display:flex;gap:8px;margin-left:12px}
+.tab{padding:6px 10px;border-radius:10px;background:transparent;border:1px solid rgba(255,255,255,0.02);cursor:pointer;color:var(--muted)}
+.tab.active{background:linear-gradient(90deg, rgba(255,102,0,0.08), rgba(255,102,0,0.02));color:#fff;border-left:3px solid var(--accent)}
+
+/* responsive */
+@media (max-width:900px){
+  #trexinity-root{grid-template-columns:1fr}
+  #trex-sidebar{display:none}
+  #login-capsule{left:50%;bottom:110px}
 }
 
-#trexinity-root {
-  display: flex;
-  flex-direction: row;
-  height: 100vh;
-  max-width: 1400px;
-  margin: auto;
-  gap: 0;
-}
-
-#trex-sidebar {
-  width: 280px;
-  background: rgba(0,0,0,0.5);
-  backdrop-filter: blur(12px);
-  padding: 10px;
-  overflow-y: auto;
-  color: white;
-}
-
-#trex-chat-area {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  background: linear-gradient(180deg, var(--bg-dark), #041226);
-  position: relative;
-}
-
-#trex-header {
-  height: 60px;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 0 20px;
-  backdrop-filter: blur(12px);
-  background: rgba(0,0,0,0.3);
-  color: white;
-  font-weight: bold;
-}
-
-#trex-logo {
-  height: 50px;
-  width: 50px;
-  background-size: contain;
-  background-repeat: no-repeat;
-  animation: logoAppear 1.5s ease-in-out forwards;
-}
-
-@keyframes logoAppear {
-  0% {opacity:0; transform: scale(0.2);}
-  100% {opacity:1; transform: scale(1);}
-}
-
-#trex-tagline {
-  position: absolute;
-  top: 10px;
-  width: 100%;
-  text-align: center;
-  font-size: 14px;
-  color: var(--accent);
-  animation: taglineSlide 30s infinite;
-}
-
-@keyframes taglineSlide {
-  0%,10%{content:'The first ever knowledge chatbot of India!';}
-  20%,30%{content:'The most safe and secure chat model';}
-  40%,50%{content:'The most fluid and polished interface';}
-  60%,70%{content:'The answers are provided by massive intelligences';}
-  80%,90%{content:'The best answering model for research works';}
-  100%{content:'May fail, can make mistakes or show any error, WE ACCEPT OUR DEMERITS';}
-}
-
-.trex-message {
-  max-width: 70%;
-  padding: 12px 16px;
-  margin: 6px;
-  border-radius: 16px;
-  backdrop-filter: blur(12px);
-  color: white;
-  word-wrap: break-word;
-}
-
-.trex-message.user {background: var(--bubble-user);}
-.trex-message.bot {background: var(--bubble-bot); color: #fff;}
-
-#trex-input-container {
-  position: sticky;
-  bottom: 0;
-  display: flex;
-  justify-content: center;
-  padding: 12px;
-  background: rgba(0,0,0,0.2);
-  backdrop-filter: blur(15px);
-  border-radius: 50px;
-  transition: all 0.3s ease;
-}
-
-#trex-input {
-  width: 100%;
-  max-width: 800px;
-  min-height: 40px;
-  padding: 10px 16px;
-  border-radius: 30px;
-  background: rgba(255,255,255,0.05);
-  color: white;
-  border: none;
-  font-family: monospace;
-  font-size: 14px;
-  resize: none;
-}
-
-#trex-settings { cursor: pointer; }
-
-#trex-login-capsule {
-  position: absolute;
-  bottom: 80px;
-  left: 50%;
-  transform: translateX(-50%);
-  background: rgba(0,0,0,0.3);
-  backdrop-filter: blur(12px);
-  padding: 8px 20px;
-  border-radius: 30px;
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  color: white;
-  display: none;
-}
-
-#trex-loading {
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  width: 120px;
-  height: 120px;
-  transform: translate(-50%,-50%);
-  display: none;
-}
-
-#trex-loading video {
-  width: 100%;
-  height: 100%;
-  border-radius: 50%;
-  border: 5px solid var(--accent);
-}
+/* helper */
+.hidden{display:none}
