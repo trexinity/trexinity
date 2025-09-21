@@ -5,7 +5,6 @@
     googleClientId: "1064519564013-te1h9ad7eutj2avr9m0s4kf05p2c57bj.apps.googleusercontent.com"
   };
 
-  // Elements
   const app = document.querySelector('.app');
   const streamEl = document.getElementById('stream');
   const composerEl = document.getElementById('composer');
@@ -16,6 +15,7 @@
   const clearChatsBtn = document.getElementById('clearChatsBtn');
   const themeToggle = document.getElementById('themeToggle');
   const userAvatar = document.getElementById('userAvatar');
+  const loginStatus = document.getElementById('loginStatus');
   const sourcesPanel = document.getElementById('sourcesPanel');
   const videoPanel = document.getElementById('videoPanel');
   const rightRail = document.querySelector('.right');
@@ -23,34 +23,17 @@
   const settingsBtn = document.getElementById('settingsBtn');
   const dialogBackdrop = document.getElementById('dialogBackdrop');
   const splash = document.getElementById('splash');
-  const googleBtn = document.getElementById('googleBtn');
-  const loginStatus = document.getElementById('loginStatus');
 
-  const tabs = document.querySelectorAll('.tab');
-  const pages = {
-    chat: document.getElementById('page-chat'),
-    about: document.getElementById('page-about'),
-    credits: document.getElementById('page-credits'),
-    posts: document.getElementById('page-posts'),
-  };
-
-  const chkVideos = document.getElementById('opt-videos');
-  const chkPhotos = document.getElementById('opt-photos');
-  const respSwitch = document.getElementById('opt-detail');
-
-  // State
   let chats = JSON.parse(localStorage.getItem('trex-chats') || '[]');
   let currentChatId = null;
   let user = JSON.parse(localStorage.getItem('trex-user') || 'null');
   let abortCurrent = null;
 
-  // Utils
   function saveChats(){ localStorage.setItem('trex-chats', JSON.stringify(chats)); }
   function makeId(){ return Math.random().toString(36).slice(2) + Date.now().toString(36); }
   function toast(msg){ const d=document.createElement('div'); d.className='toast'; d.textContent=msg; toasts.appendChild(d); setTimeout(()=>d.remove(), 4200); }
   function escapeHtml(s){ return String(s||'').replace(/[&<>"']/g, m=>({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[m])); }
 
-  // Theme + logos
   (function initTheme(){
     try{
       const pref = localStorage.getItem("trex-theme");
@@ -70,16 +53,6 @@
       : "https://cdn.jsdelivr.net/gh/trexinity/trexinity/trexinity-logo-white.png";
   });
 
-  // Tabs
-  tabs.forEach(t => t.addEventListener('click', () => {
-    if (t.id==='themeToggle' || t.id==='settingsBtn') return;
-    tabs.forEach(x => x.classList.remove('active'));
-    t.classList.add('active');
-    Object.values(pages).forEach(p => p.classList.remove('active'));
-    pages[t.dataset.page]?.classList.add('active');
-  }));
-
-  // Chat helpers
   function ensureChat(){
     if (!currentChatId){
       const id = makeId();
@@ -95,7 +68,7 @@
       const div = document.createElement('div');
       div.className = 'chat-item' + (c.id===currentChatId?' active':'');
       div.innerHTML = `<div style="font-weight:500">${c.title||'Untitled'}</div>`;
-      div.onclick = ()=>{ currentChatId = c.id; renderMessages(); renderChatList(); };
+      div.onclick = ()=>{ currentChatId=c.id; renderMessages(); renderChatList(); };
       chatList.appendChild(div);
     });
   }
@@ -111,26 +84,24 @@
     streamEl.scrollTop = streamEl.scrollHeight;
   }
 
-  // Typing effect (cancelable)
   async function typeInto(el, html, ms=2){
     if (abortCurrent) abortCurrent();
     let cancel=false; abortCurrent=()=>{cancel=true;};
     el.innerHTML='';
     const tmp=document.createElement('div'); tmp.innerHTML=html;
-    const text = tmp.textContent || '';
+    const text=tmp.textContent||'';
     for (let i=0;i<text.length;i++){
       if (cancel) return;
       el.textContent = text.slice(0,i+1);
-      await new Promise(r=>setTimeout(r, ms));
+      await new Promise(r=>setTimeout(r,ms));
     }
     if (!cancel) el.innerHTML = html;
     abortCurrent=null;
   }
 
-  // Google Identity Services
   window.handleGoogleCredential = async (response) => {
     try{
-      const r = await fetch(CONFIG.loginWorker + "?id_token=" + encodeURIComponent(response.credential));
+      const r = await fetch(CONFIG.loginWorker+"?id_token="+encodeURIComponent(response.credential));
       if(!r.ok) throw new Error("Login failed");
       const profile = await r.json();
       user = profile; localStorage.setItem('trex-user', JSON.stringify(user));
@@ -142,15 +113,14 @@
   function renderGIS(){
     if (window.google?.accounts?.id){
       window.google.accounts.id.initialize({ client_id: CONFIG.googleClientId, callback: window.handleGoogleCredential, auto_select:false });
-      window.google.accounts.id.renderButton(googleBtn, { theme: document.body.classList.contains('light')?'outline':'filled_black', size:"medium", shape:"pill" });
+      window.google.accounts.id.renderButton(document.getElementById('googleBtn'), { theme: document.body.classList.contains('light')?'outline':'filled_black', size:"medium", shape:"pill" });
       window.google.accounts.id.prompt();
     }
   }
   if (window.google?.accounts?.id) renderGIS(); else {
-    const i=setInterval(()=>{ if (window.google?.accounts?.id){ clearInterval(i); renderGIS(); } }, 120);
+    const i=setInterval(()=>{ if(window.google?.accounts?.id){ clearInterval(i); renderGIS(); } }, 120);
   }
 
-  // Ask
   async function ask(question){
     if (abortCurrent) abortCurrent();
     ensureChat();
@@ -173,9 +143,9 @@
     streamEl.scrollTop = streamEl.scrollHeight;
 
     try{
-      const detail = respSwitch?.value || "default";
+      const detail = (document.getElementById('opt-detail')?.value)||"default";
       const decorated = `${question}${detail==='short'?' (brief)':detail==='detailed'?' (comprehensive)':''}`;
-      const includeVideos = chkVideos?.checked;
+      const includeVideos = document.getElementById('opt-videos')?.checked;
 
       const r = await fetch(CONFIG.mainWorker, {
         method:'POST', headers:{'Content-Type':'application/json'},
@@ -209,14 +179,13 @@
       if (chat.title==='New conversation'){ chat.title = question.slice(0,60); }
       saveChats(); renderChatList();
 
-      // Right rail
+      // Right rail fill
       if (sourcesPanel){
         sourcesPanel.innerHTML='';
         sources.slice(0,10).forEach(u=>{
           const pill=document.createElement('div'); pill.className='pill';
           try{ pill.textContent=new URL(u).hostname; }catch{ pill.textContent='Source'; }
-          pill.onclick=()=>window.open(u,'_blank');
-          sourcesPanel.appendChild(pill);
+          pill.onclick=()=>window.open(u,'_blank'); sourcesPanel.appendChild(pill);
         });
       }
       if (videoPanel){
@@ -227,19 +196,16 @@
     }
   }
 
-  // Events
   sendBtn.addEventListener('click', ()=>{ const q=composerEl.value.trim(); if(!q) return; composerEl.value=''; ask(q); });
   composerEl.addEventListener('keydown', e=>{ if(e.key==='Enter' && !e.shiftKey){ e.preventDefault(); const q=composerEl.value.trim(); if(!q) return; composerEl.value=''; ask(q); } });
   newChatBtn.addEventListener('click', ()=>{ currentChatId=null; ensureChat(); renderMessages(); renderChatList(); });
   clearChatsBtn.addEventListener('click', ()=>{ if(confirm('Clear all chats?')){ chats=[]; currentChatId=null; saveChats(); renderChatList(); renderMessages(); } });
 
-  // Init
   (function init(){
     if (user?.picture) userAvatar.src = user.picture;
-    if (document.getElementById('loginStatus')) loginStatus.textContent = user?.name || 'Guest';
+    if (loginStatus) loginStatus.textContent = user?.name || 'Guest';
     renderChatList();
-    if (chats.length){ currentChatId = chats[0].id; renderMessages(); }
-    // Hide splash
+    if (chats.length){ currentChatId=chats[0].id; renderMessages(); }
     setTimeout(()=>{ if(splash){ splash.style.opacity='0'; setTimeout(()=>splash.style.display='none',300); } }, 1000);
   })();
 })();
