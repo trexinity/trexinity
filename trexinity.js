@@ -1,11 +1,9 @@
-// Trexinity UI logic: tabs, theme, chats, Cloudflare integration (no modules for Blogger)
 (function(){
   const CONFIG = {
     mainWorker: "https://trexinity.shauryaagarwal-id.workers.dev/",
     loginWorker: "https://trexinity-login.shauryaagarwal-id.workers.dev/"
   };
 
-  // Grab elements
   const streamEl = document.getElementById('stream');
   const composerEl = document.getElementById('composer');
   const sendBtn = document.getElementById('sendBtn');
@@ -23,10 +21,9 @@
     chat: document.getElementById('page-chat'),
     about: document.getElementById('page-about'),
     credits: document.getElementById('page-credits'),
-    posts: document.getElementById('page-posts')
+    posts: document.getElementById('page-posts'),
   };
 
-  // Tabs
   tabs.forEach(t => t.addEventListener('click', () => {
     tabs.forEach(x => x.classList.remove('active'));
     t.classList.add('active');
@@ -34,7 +31,6 @@
     pages[t.dataset.page].classList.add('active');
   }));
 
-  // Theme init + toggle
   try {
     const pref = localStorage.getItem("trex-theme");
     const sys = (window.matchMedia && window.matchMedia('(prefers-color-scheme: light)').matches) ? 'light' : 'dark';
@@ -49,7 +45,6 @@
       : "https://cdn.jsdelivr.net/gh/trexinity/trexinity/trexinity-logo-white.png";
   });
 
-  // State
   let chats = JSON.parse(localStorage.getItem('trex-chats') || '[]');
   let currentChatId = null;
   let user = JSON.parse(localStorage.getItem('trex-user') || 'null');
@@ -117,7 +112,6 @@
     });
   }
 
-  // Login (dev simple)
   if (loginBtn){
     loginBtn.addEventListener('click', async ()=>{
       try{
@@ -131,14 +125,12 @@
     });
   }
 
-  // Ask
   async function ask(question){
     ensureChat();
     const chat = currentChat();
     chat.messages.push({ role:'user', content:question });
     saveChats(); renderMessages();
 
-    // loading bubble with animation mp4
     const pid = makeId();
     chat.messages.push({ id:pid, role:'assistant', content:'', html:
       `<div style="display:flex;align-items:center;gap:10px;">
@@ -172,7 +164,6 @@
     }
   }
 
-  // Events
   if (sendBtn){
     sendBtn.addEventListener('click', ()=>{
       const q = composerEl.value.trim(); if(!q) return; composerEl.value=''; ask(q);
@@ -195,11 +186,9 @@
     });
   }
 
-  // Init
   (function init(){
     if (user && user.picture) userAvatar.src = user.picture;
     renderChatList();
     if (chats.length){ currentChatId = chats[0].id; renderMessages(); }
   })();
 })();
-
