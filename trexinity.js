@@ -1,5 +1,4 @@
 (function(){
-  // Config
   const CONFIG = {
     mainWorker: "https://trexinity.shauryaagarwal-id.workers.dev/",
     loginWorker: "https://trexinity-login.shauryaagarwal-id.workers.dev/",
@@ -18,11 +17,11 @@
   const themeToggle = document.getElementById('themeToggle');
   const userAvatar = document.getElementById('userAvatar');
   const sourcesPanel = document.getElementById('sourcesPanel');
+  const videoPanel = document.getElementById('videoPanel');
   const rightRail = document.querySelector('.right');
   const brandLogo = document.getElementById('brandLogo');
   const settingsBtn = document.getElementById('settingsBtn');
   const dialogBackdrop = document.getElementById('dialogBackdrop');
-  const dialogEl = document.getElementById('settingsDialog');
   const splash = document.getElementById('splash');
   const tabs = document.querySelectorAll('.tab');
   const pages = {
@@ -32,10 +31,10 @@
     posts: document.getElementById('page-posts'),
   };
 
-  // Feature toggles under composer
+  // Toggles
   const chkVideos = document.getElementById('opt-videos');
   const chkPhotos = document.getElementById('opt-photos');
-  const respSwitch = document.getElementById('opt-detail'); // values: short|default|detailed
+  const respSwitch = document.getElementById('opt-detail');
 
   // State
   let chats = JSON.parse(localStorage.getItem('trex-chats') || '[]');
@@ -50,7 +49,7 @@
   }
   function escapeHtml(s){ return String(s||'').replace(/[&<>"']/g, m=>({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[m])); }
 
-  // Theme init + toggle with logo swap
+  // Theme init and logo swap
   (function initTheme(){
     try{
       const pref = localStorage.getItem("trex-theme");
@@ -73,13 +72,14 @@
 
   // Tabs
   tabs.forEach(t => t.addEventListener('click', () => {
+    if (t.id==='themeToggle' || t.id==='settingsBtn') return;
     tabs.forEach(x => x.classList.remove('active'));
     t.classList.add('active');
     Object.values(pages).forEach(p => p.classList.remove('active'));
     pages[t.dataset.page].classList.add('active');
   }));
 
-  // Chats
+  // Chat helpers
   function ensureChat(){
     if (!currentChatId){
       const id = makeId();
@@ -105,34 +105,39 @@
     });
     streamEl.scrollTop=streamEl.scrollHeight;
   }
-  function renderAnswer(text, vids, sources){
-    const p = String(text||'').split(/\n{2,}/).map(x=>`<p>${escapeHtml(x).replace(/\n/g,'<br/>')}</p>`).join('');
+
+  // Typing effect (ChatGPT-like feel without server streaming)
+  async function typeInto(el, full, delay=12){
+    el.innerHTML = '';
+    for (let i=0;i<full.length;i++){
+      el.innerHTML = full.slice(0, i+1);
+      await new Promise(r=>setTimeout(r, delay));
+    }
+  }
+
+  function renderAnswerHTML(text, vids, sources){
+    const safe = escapeHtml(text||'');
+    const paras = safe.split(/\n{2,}/).map(x=>`<p>${x.replace(/\n/g,'<br/>')}</p>`).join('');
     const v = vids && vids.length ? `
       <div style="margin-top:10px;display:flex;flex-direction:column;gap:8px;">
-        ${vids.slice(0,3).map(v=>`<iframe width="100%" height="230"
-          src="https://www.youtube.com/embed/${escapeHtml(v.id||'')}"
-          title="${escapeHtml(v.title||'Video')}"
+        <iframe width="100%" height="230"
+          src="https://www.youtube.com/embed/${escapeHtml(vids[0].id||'')}?modestbranding=1&rel=0&enablejsapi=1"
+          title="${escapeHtml(vids[0].title||'Video')}"
           frameborder="0"
           allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
           allowfullscreen
-          referrerpolicy="strict-origin-when-cross-origin"></iframe>`).join('')}
+          referrerpolicy="strict-origin-when-cross-origin"></iframe>
       </div>` : '';
     const s = sources && sources.length ? `
       <div style="margin-top:10px;opacity:.85;font-size:13px;">
         ${sources.slice(0,8).map(x=>`<a class="pill" href="${escapeHtml(x)}" target="_blank" rel="noopener" style="margin-right:6px;">Source</a>`).join('')}
       </div>` : '';
-    return p+v+s;
-  }
-  function renderSources(sources){
-    sourcesPanel.innerHTML=''; (sources||[]).slice(0,12).forEach(src=>{
-      const b=document.createElement('div'); b.className='pill'; b.textContent=src; sourcesPanel.appendChild(b);
-    });
+    return {paras, v, s};
   }
 
-  // Google Identity Services (button + One Tap)
+  // Google Identity Services
   window.handleGoogleCredential = async (response) => {
     try{
-      // Send credential to login worker to validate and map profile
       const r = await fetch(CONFIG.loginWorker+"?id_token="+encodeURIComponent(response.credential));
       if(!r.ok) throw new Error("Login failed");
       const profile = await r.json();
@@ -142,104 +147,103 @@
     }catch(e){ toast("Login error"); }
   };
 
-  function loadGIS(){
+  function renderGIS(){
     if (window.google && window.google.accounts && window.google.accounts.id){
       window.google.accounts.id.initialize({ client_id: CONFIG.googleClientId, callback: window.handleGoogleCredential, auto_select:false });
-      window.google.accounts.id.renderButton(document.getElementById('googleBtn'), { theme: document.body.classList.contains('light')?'outline':'filled_black', size:"medium", shape:"pill" });
+      window.google.accounts.id.renderButton(document.getElementById('googleBtn'),
+        { theme: document.body.classList.contains('light')?'outline':'filled_black', size:"medium", shape:"pill" }
+      );
       window.google.accounts.id.prompt(); // One Tap
     }
   }
-  // Inject GIS script
-  (function injectGIS(){
-    const s = document.createElement('script');
-    s.src = "https://accounts.google.com/gsi/client"; s.async = true; s.defer = true;
-    s.onload = loadGIS; document.head.appendChild(s);
-  })();
+  if (window.google && window.google.accounts) renderGIS(); else {
+    // load when script ready
+    const check = setInterval(()=>{ if (window.google && window.google.accounts){ clearInterval(check); renderGIS(); } }, 150);
+  }
 
-  // Ask flow
+  // Ask
   async function ask(question){
     ensureChat(); const chat=currentChat();
     chat.messages.push({ role:'user', content:question }); saveChats(); renderMessages();
 
-    // Open right rail after first question with animation
+    // Open right rail only now
     app.classList.add('right-open');
     rightRail.classList.remove('hidden');
 
-    // Placeholder with inline animation
+    // Placeholder bubble
     const pid = makeId();
-    chat.messages.push({ id:pid, role:'assistant', content:'', html:
-      `<div style="display:flex;align-items:center;gap:10px;">
-         <video src="https://cdn.jsdelivr.net/gh/trexinity/trexinity/trexinity-logo-animation.mp4" autoplay loop muted playsinline style="height:28px;border-radius:8px"></video>
-         <em>Thinking…</em>
-       </div>` });
-    saveChats(); renderMessages();
+    const holder = document.createElement('div');
+    holder.className = 'msg assistant';
+    holder.innerHTML = `
+      <div style="display:flex;align-items:center;gap:10px;">
+        <video src="https://cdn.jsdelivr.net/gh/trexinity/trexinity/trexinity-logo-animation.mp4" autoplay loop muted playsinline style="height:28px;border-radius:8px"></video>
+        <em>Thinking…</em>
+      </div>`;
+    streamEl.appendChild(holder);
+    streamEl.scrollTop = streamEl.scrollHeight;
 
-    // Build payload options
-    const optionsNote = [];
-    if (chkVideos && chkVideos.checked) optionsNote.push("videos");
-    if (chkPhotos && chkPhotos.checked) optionsNote.push("photos");
+    // Build query detail preference
     const detail = respSwitch ? respSwitch.value : "default";
+    const decorated = `${question}${detail==='short'?' (short answer)':detail==='detailed'?' (detailed answer)':''}`;
 
     try{
       const r = await fetch(CONFIG.mainWorker, {
         method:'POST',
         headers:{ 'Content-Type':'application/json' },
-        body: JSON.stringify({ questions:[`${question}${detail==='short'?' (short answer)':detail==='detailed'?' (detailed answer)':''}`] })
+        body: JSON.stringify({ questions:[decorated], maxVideos: (chkVideos && chkVideos.checked) ? 1 : 0 })
       });
       if (!r.ok) throw new Error("Service unavailable "+r.status);
       const j = await r.json();
       const out = j.answers && j.answers[0] ? j.answers[0] : { answer:'' };
       const answer = out.answer || '';
-      let vids = Array.isArray(out.videos)?out.videos:[];
-      // If Include videos is disabled, drop embedded videos
-      if (chkVideos && !chkVideos.checked) vids = [];
-
+      const vids = (chkVideos && chkVideos.checked) ? (Array.isArray(out.videos)?out.videos:[]) : [];
       const sources = Array.isArray(out.sources)?out.sources:[];
-      const html = renderAnswer(answer, vids, sources);
+      const parts = renderAnswerHTML(answer, vids, sources);
 
-      const msg = chat.messages.find(m=>m.id===pid);
-      if (msg){ msg.content=answer; msg.html=html; }
+      // Replace placeholder and type
+      holder.innerHTML = parts.paras + parts.v + parts.s;
+      await typeInto(holder, holder.innerHTML, 2);
+
+      // Update chat state
+      chat.messages.push({ id:pid, role:'assistant', content:answer, html:holder.innerHTML });
       if (chat.title==='New chat'){ chat.title = question.slice(0,60); }
-      saveChats(); renderMessages(); renderSources(sources);
+      saveChats(); renderChatList();
+
+      // Fill right rail panels
+      sourcesPanel.innerHTML='';
+      (sources||[]).slice(0,12).forEach(src=>{
+        const b=document.createElement('div'); b.className='pill'; b.textContent=src; sourcesPanel.appendChild(b);
+      });
+      videoPanel.innerHTML = parts.v || '';
     }catch(e){
-      const msg = chat.messages.find(m=>m.id===pid);
-      if (msg){
-        msg.html = `<div><span style="color:var(--orange)">Partial results due to error:</span> ${escapeHtml(e.message)}</div>`;
-      }
-      saveChats(); renderMessages();
+      holder.innerHTML = `<div><span style="color:var(--orange)">Error:</span> ${escapeHtml(e.message)}</div>`;
     }
   }
 
   // Events
-  if (sendBtn){
-    sendBtn.addEventListener('click', ()=>{
+  sendBtn.addEventListener('click', ()=>{
+    const q = composerEl.value.trim(); if(!q) return; composerEl.value=''; ask(q);
+  });
+  composerEl.addEventListener('keydown', (e)=>{
+    if (e.key==='Enter' && !e.shiftKey){
+      e.preventDefault();
       const q = composerEl.value.trim(); if(!q) return; composerEl.value=''; ask(q);
-    });
-  }
-  if (composerEl){
-    composerEl.addEventListener('keydown', (e)=>{
-      if (e.key==='Enter' && !e.shiftKey){ e.preventDefault(); const q = composerEl.value.trim(); if(!q) return; composerEl.value=''; ask(q); }
-    });
-  }
-  if (newChatBtn){ newChatBtn.addEventListener('click', ()=>{ currentChatId=null; ensureChat(); renderMessages(); }); }
-  if (clearChatsBtn){ clearChatsBtn.addEventListener('click', ()=>{ if(confirm('Clear all chats?')){ chats=[]; currentChatId=null; saveChats(); renderChatList(); renderMessages(); } }); }
+    }
+  });
+  newChatBtn.addEventListener('click', ()=>{ currentChatId=null; ensureChat(); renderMessages(); });
+  clearChatsBtn.addEventListener('click', ()=>{ if(confirm('Clear all chats?')){ chats=[]; currentChatId=null; saveChats(); renderChatList(); renderMessages(); } });
 
   // Settings dialog
-  if (settingsBtn){
-    settingsBtn.addEventListener('click', ()=>{ dialogBackdrop.style.display='flex'; });
-  }
-  if (dialogBackdrop){
-    dialogBackdrop.addEventListener('click', (e)=>{ if (e.target===dialogBackdrop) dialogBackdrop.style.display='none'; });
-    document.getElementById('closeDialog').addEventListener('click', ()=> dialogBackdrop.style.display='none');
-  }
+  settingsBtn.addEventListener('click', ()=>{ dialogBackdrop.style.display='flex'; });
+  dialogBackdrop.addEventListener('click', (e)=>{ if (e.target===dialogBackdrop) dialogBackdrop.style.display='none'; });
+  document.getElementById('closeDialog').addEventListener('click', ()=> dialogBackdrop.style.display='none');
 
   // Init
   (function init(){
     renderChatList();
     if (chats.length){ currentChatId = chats[0].id; renderMessages(); }
     if (user && user.picture) userAvatar.src = user.picture;
-
-    // Splash loading animation; hide after short delay
-    setTimeout(()=>{ if (splash) splash.style.display='none'; }, 1200);
+    // Hide splash after a moment
+    setTimeout(()=>{ if (splash) splash.style.display='none'; }, 1000);
   })();
 })();
